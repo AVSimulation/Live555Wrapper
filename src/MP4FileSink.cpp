@@ -2210,7 +2210,7 @@ unsigned MP4FileSink::addAtom_hdlr2() {
 								for (p2 = p1, p3 = searchStr; tolower(*p2) == *p3; ++p2, ++p3) {}
 								if (*p3 == '\0') {
 									// We found the end of the search string, at p2.
-									int beforeTrackNumPosn = p2 - sdpLines;
+									int beforeTrackNumPosn = static_cast<int>(p2 - sdpLines);
 									// Look for the subsequent track number, and skip over it:
 									int trackNumLength;
 									if (sscanf(p2, " %*d%n", &trackNumLength) < 0) break;

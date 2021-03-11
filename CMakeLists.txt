@@ -32,6 +32,8 @@ FIND_PACKAGE(OpenSSL REQUIRED)
 add_library(Live555Wrapper SHARED
 src/MP4FileSink.h
 src/MP4FileSink.cpp
+src/Live555Wrapper.h
+src/Live555Wrapper.cpp
 )
 
 target_include_directories(Live555Wrapper PRIVATE ${LIVE555_INCLUDE_DIR})
@@ -45,3 +47,7 @@ OpenSSL::SSL
 OpenSSL::Crypto
 Ws2_32
 )
+
+IF(WIN32)
+    target_compile_definitions(Live555Wrapper PRIVATE L555W_EXPORTS _CRT_SECURE_NO_WARNINGS)
+ENDIF(WIN32)
