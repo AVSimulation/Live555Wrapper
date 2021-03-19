@@ -1,10 +1,45 @@
 cmake_minimum_required(VERSION 3.0)
 
 
-#### Customize with your own environement
-SET(VCPKG_BASE_PATH $ENV{EXTERNALS2_PATH}/windows/vs2019/VCPKG/)
-####
-set(CMAKE_TOOLCHAIN_FILE "${VCPKG_BASE_PATH}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+################################### ENV CHECK
+IF(NOT DEFINED ENV{EXTERNALS2_PATH} AND NOT DEFINED ENV{EXTERNALS2_PATH_SYS})
+	message( FATAL_ERROR "$EXTERNALS2_PATH or EXTERNALS2_PATH_SYS are not defined. Aborting" )
+ENDIF()
+
+### One system only env var (Windows or linux)
+IF(DEFINED ENV{EXTERNALS2_PATH_SYS})
+	SET(EXTERNALS_BASE_PATH "$ENV{EXTERNALS2_PATH_SYS}" CACHE STRING "")
+ELSE()
+	IF(WIN32)
+		SET(PLATFORM "windows/vs2019" CACHE STRING "")
+	ELSE(WIN32)
+		SET(PLATFORM "linux/${LSB_DISTRIBUTOR_ID}/${LSB_RELEASE}" CACHE STRING "")
+	ENDIF()
+
+	SET(EXTERNALS_BASE_PATH "$ENV{EXTERNALS2_PATH}/${PLATFORM}" CACHE STRING "")
+ENDIF()
+
+file(TO_CMAKE_PATH "${EXTERNALS_BASE_PATH}" EXTERNALS_BASE_PATH)
+
+message(STATUS "EXTERNALS2 BASE PATH: ${EXTERNALS_BASE_PATH}")
+
+# Include toolchain from vcpkg
+IF(WIN32)
+	if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
+		if(DEFINED ENV{VCPKGAVS_ROOT})
+			set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKGAVS_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+		else()
+			set(CMAKE_TOOLCHAIN_FILE "${EXTERNALS_BASE_PATH}/VCPKG/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+		endif()
+	endif()
+	message(STATUS "Using CMAKE_TOOLCHAIN_FILE: " ${CMAKE_TOOLCHAIN_FILE})
+ENDIF(WIN32)
+
+if(WIN32)
+	STRING(APPEND EXTERNALS_BASE_PATH "/x64" ) #TODO x64/x86
+else(WIN32)
+	set(VCPKG_TARGET_TRIPLET "x64-linux-dynamic" CACHE STRING "VCPKG Target Triplet to use")
+endif(WIN32)
 
 
 # Custom function to handle Windows release/debug vcpkg libs
@@ -17,6 +52,20 @@ endfunction()
 
 #############################################
 project(Live555Wrapper)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "My multi config types" FORCE)
+
+IF(MSVC)
+	set(CMAKE_DEBUG_POSTFIX D)
+	ADD_DEFINITIONS(-D_SCL_SECURE_NO_WARNINGS)
+	ADD_DEFINITIONS(-D_CRT_SECURE_NO_DEPRECATE)
+ELSE(MSVC)
+	SET(CMAKE_CXX_FLAGS "-O3 -Wno-deprecated -Wno-invalid-offsetof -Wno-unused-result -fext-numeric-literals -Wno-psabi -fpermissive")
+	SET(CMAKE_C_FLAGS "-O3 -Wno-deprecated -Wno-unused-result -Wno-psabi")
+ENDIF(MSVC)
 
 # LIVE555
 set(LIVE555_INCLUDE_DIR  "${VCPKG_BASE_PATH}/installed/${VCPKG_TARGET_TRIPLET}/include" CACHE PATH "")
@@ -51,3 +100,9 @@ Ws2_32
 IF(WIN32)
     target_compile_definitions(Live555Wrapper PRIVATE L555W_EXPORTS _CRT_SECURE_NO_WARNINGS)
 ENDIF(WIN32)
+
+
+#### Install part
+install(TARGETS Live555Wrapper)
+
+install(FILES "src/Live555Wrapper.h" DESTINATION "include")
