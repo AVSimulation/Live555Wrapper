@@ -28,8 +28,10 @@ IF(WIN32)
 	if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 		if(DEFINED ENV{VCPKGAVS_ROOT})
 			set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKGAVS_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+			set(VCPKG_BASE_PATH $ENV{VCPKGAVS_ROOT})
 		else()
 			set(CMAKE_TOOLCHAIN_FILE "${EXTERNALS_BASE_PATH}/VCPKG/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
+			set(VCPKG_BASE_PATH ${EXTERNALS_BASE_PATH}/VCPKG/)
 		endif()
 	endif()
 	message(STATUS "Using CMAKE_TOOLCHAIN_FILE: " ${CMAKE_TOOLCHAIN_FILE})
@@ -101,6 +103,8 @@ IF(WIN32)
     target_compile_definitions(Live555Wrapper PRIVATE L555W_EXPORTS _CRT_SECURE_NO_WARNINGS)
 ENDIF(WIN32)
 
+
+add_subdirectory(test)
 
 #### Install part
 install(TARGETS Live555Wrapper)
