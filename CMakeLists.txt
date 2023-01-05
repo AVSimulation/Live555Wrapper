@@ -85,6 +85,8 @@ src/MP4FileSink.h
 src/MP4FileSink.cpp
 src/Live555Wrapper.h
 src/Live555Wrapper.cpp
+src/StdoutUsageEnv.h
+src/StdoutUsageEnv.cpp
 )
 
 target_include_directories(Live555Wrapper PRIVATE ${LIVE555_INCLUDE_DIR})

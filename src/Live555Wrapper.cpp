@@ -1,10 +1,11 @@
 #include "Live555Wrapper.h"
 
-#include "RTSPClient.hh"
-#include "BasicUsageEnvironment.hh"
-#include "GroupsockHelper.hh"
-#include "BasicUsageEnvironment0.hh"
 #include "MP4FileSink.h"
+#include "StdoutUsageEnv.h"
+
+#include "RTSPClient.hh"
+#include "GroupsockHelper.hh"
+
 
 #include <iostream>
 
@@ -116,7 +117,7 @@ L555W_API l555Receiver* l555_createReceiver()
 	l555Receiver* recv = new l555Receiver;
 
 	recv->myScheduler = BasicTaskScheduler::createNew();
-	recv->myEnv = BasicUsageEnvironment::createNew(*recv->myScheduler);
+	recv->myEnv = StdoutUsageEnv::createNew(*recv->myScheduler);
 
 	return recv;
 }
