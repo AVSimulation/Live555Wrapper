@@ -1,58 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 
 
-################################### ENV CHECK
-IF(NOT DEFINED ENV{EXTERNALS2_PATH} AND NOT DEFINED ENV{EXTERNALS2_PATH_SYS})
-	message( FATAL_ERROR "$EXTERNALS2_PATH or EXTERNALS2_PATH_SYS are not defined. Aborting" )
-ENDIF()
 
-### One system only env var (Windows or linux)
-IF(DEFINED ENV{EXTERNALS2_PATH_SYS})
-	SET(EXTERNALS_BASE_PATH "$ENV{EXTERNALS2_PATH_SYS}" CACHE STRING "")
-ELSE()
-	IF(WIN32)
-		SET(PLATFORM "windows/vs2019" CACHE STRING "")
-	ELSE(WIN32)
-		SET(PLATFORM "linux/${LSB_DISTRIBUTOR_ID}/${LSB_RELEASE}" CACHE STRING "")
-	ENDIF()
-
-	SET(EXTERNALS_BASE_PATH "$ENV{EXTERNALS2_PATH}/${PLATFORM}" CACHE STRING "")
-ENDIF()
-
-file(TO_CMAKE_PATH "${EXTERNALS_BASE_PATH}" EXTERNALS_BASE_PATH)
-
-message(STATUS "EXTERNALS2 BASE PATH: ${EXTERNALS_BASE_PATH}")
-
-# Include toolchain from vcpkg
-IF(WIN32)
-	if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
-		if(DEFINED ENV{VCPKGAVS_ROOT})
-			set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKGAVS_ROOT}/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-			set(VCPKG_BASE_PATH $ENV{VCPKGAVS_ROOT})
-		else()
-			set(CMAKE_TOOLCHAIN_FILE "${EXTERNALS_BASE_PATH}/VCPKG/scripts/buildsystems/vcpkg.cmake" CACHE STRING "")
-			set(VCPKG_BASE_PATH ${EXTERNALS_BASE_PATH}/VCPKG/)
-		endif()
-	endif()
-	message(STATUS "Using CMAKE_TOOLCHAIN_FILE: " ${CMAKE_TOOLCHAIN_FILE})
-ENDIF(WIN32)
-
-if(WIN32)
-	STRING(APPEND EXTERNALS_BASE_PATH "/x64" ) #TODO x64/x86
-else(WIN32)
-	set(VCPKG_TARGET_TRIPLET "x64-linux-dynamic" CACHE STRING "VCPKG Target Triplet to use")
-endif(WIN32)
-
-
-# Custom function to handle Windows release/debug vcpkg libs
-function(AVS_FINDLIBS_VCPKG VARNAME LIBNAME)
-	find_library(${VARNAME}_RELEASE NAMES ${LIBNAME} PATHS  ${VCPKG_BASE_PATH}/installed/${VCPKG_TARGET_TRIPLET}/lib NO_DEFAULT_PATH)
-	find_library(${VARNAME}_DEBUG NAMES ${LIBNAME} PATHS  ${VCPKG_BASE_PATH}/installed/${VCPKG_TARGET_TRIPLET}/debug/lib/ NO_DEFAULT_PATH)
-	set(${VARNAME} debug ${${VARNAME}_DEBUG} optimized ${${VARNAME}_RELEASE} CACHE PATH "")
-endfunction()
-#
-
-#############################################
 project(Live555Wrapper)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -70,11 +19,7 @@ ELSE(MSVC)
 ENDIF(MSVC)
 
 # LIVE555
-set(LIVE555_INCLUDE_DIR  "${VCPKG_BASE_PATH}/installed/${VCPKG_TARGET_TRIPLET}/include" CACHE PATH "")
-AVS_FINDLIBS_VCPKG(LIVE555_LIBMEDIA liveMedia)
-AVS_FINDLIBS_VCPKG(LIVE555_LIBUSAGE UsageEnvironment)
-AVS_FINDLIBS_VCPKG(LIVE555_LIBBASICUSAGE BasicUsageEnvironment)
-AVS_FINDLIBS_VCPKG(LIVE555_LIBGROUPSOCK groupsock)
+find_package(unofficial-live555 CONFIG REQUIRED)
 SET(LIVE555_LIBRARIES ${LIVE555_LIBMEDIA} ${LIVE555_LIBUSAGE} ${LIVE555_LIBBASICUSAGE} ${LIVE555_LIBGROUPSOCK})
 
 # OpenSSL
@@ -91,11 +36,11 @@ src/StdoutUsageEnv.cpp
 
 target_include_directories(Live555Wrapper PRIVATE ${LIVE555_INCLUDE_DIR})
 
-target_link_libraries(Live555Wrapper 
-${LIVE555_LIBMEDIA} 
-${LIVE555_LIBUSAGE} 
-${LIVE555_LIBBASICUSAGE} 
-${LIVE555_LIBGROUPSOCK}
+target_link_libraries(Live555Wrapper
+unofficial::live555::liveMedia
+unofficial::live555::UsageEnvironment
+unofficial::live555::BasicUsageEnvironment
+unofficial::live555::groupsock   
 OpenSSL::SSL
 OpenSSL::Crypto
 Ws2_32
@@ -105,10 +50,26 @@ IF(WIN32)
     target_compile_definitions(Live555Wrapper PRIVATE L555W_EXPORTS _CRT_SECURE_NO_WARNINGS)
 ENDIF(WIN32)
 
-
 add_subdirectory(test)
 
 #### Install part
-install(TARGETS Live555Wrapper)
+install(TARGETS Live555Wrapper
+    EXPORT live555wrapper-export
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    INCLUDES DESTINATION include/
+)
 
-install(FILES "src/Live555Wrapper.h" DESTINATION "include")
+install(FILES "src/Live555Wrapper.h" DESTINATION "include" CONFIGURATIONS Release)
+
+install(FILES cmake/unofficial-live555wrapper-config.cmake DESTINATION "share/unofficial-live555wrapper")
+
+install(EXPORT live555wrapper-export
+  FILE
+  	Live555WrapperTargets.cmake
+  NAMESPACE
+  	unofficial::live555wrapper::
+  DESTINATION
+    share/unofficial-live555wrapper
+)
